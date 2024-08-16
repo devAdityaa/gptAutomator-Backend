@@ -3,9 +3,11 @@ const { fetchPrompt, updatePrompt, fetchInfo } = require('../services/dbService.
 
 async function getPrompt(req, res) {
     try {
+        console.log("GET PROMPT REQUEST RECEIVED");
+        console.log("ID: ",req.query.id);
         const id = parseInt(req.query.id);
         const prompt = await fetchPrompt(id);
-
+        console.log("PROMPT FETCHED FROM POSTGRES DATABASE FOR THE ID:", prompt)
         if (!prompt) {
             return res.status(404).json({ message: 'No prompt found' });
         }
@@ -33,6 +35,7 @@ async function getInfo(req, res) {
 }
 
 async function postPrompt(req, res) {
+    console.log("POST PROMPT REQUEST RECEIVED");
     const { p_id, result } = req.body;
 
     try {

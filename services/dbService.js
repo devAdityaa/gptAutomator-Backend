@@ -18,8 +18,18 @@ async function fetchPrompt(id) {
 
         if (res.rows.length > 0) {
             const row = res.rows[id - 1];
-            await commitTransaction(client);
-            return { prompt: row.prompt, promptId: row.p_id };
+            if(row){
+                await client.query(`
+                    UPDATE task_pipeline
+                    SET prompt_time = NOW()
+                    WHERE p_id = $1
+                `, [row.p_id]);
+                await commitTransaction(client);
+                return { prompt: row.prompt, promptId: row.p_id };
+            }
+            else
+                return { prompt: '', promptId: '' };
+            
         } else {
             await commitTransaction(client);
             return null;
@@ -32,6 +42,7 @@ async function fetchPrompt(id) {
         client.release();
     }
 }
+
 
 async function fetchInfo() {
     const client = await pool.connect();
