@@ -7,23 +7,26 @@ async function fetchPrompt(id) {
         await startTransaction(client);
 
         const res = await client.query(`
-            SELECT prompt, p_id
+            WITH selected_prompt AS (
+            SELECT p_id, prompt
             FROM task_pipeline
             WHERE process_ai = 'chatGPT'
             AND prompt IS NOT NULL
             AND prompt_time IS NULL
             ORDER BY prio DESC, created
+            LIMIT 1
             FOR UPDATE
+            )
+            UPDATE task_pipeline
+            SET prompt_account = '<<GptAccount>>',
+            prompt_time = NOW()
+            WHERE p_id = (SELECT p_id FROM selected_prompt)
+            RETURNING p_id, prompt, prompt_time;
         `);
 
         if (res.rows.length > 0) {
-            const row = res.rows[id - 1];
+            const row = res.rows[0];
             if(row){
-                await client.query(`
-                    UPDATE task_pipeline
-                    SET prompt_time = NOW()
-                    WHERE p_id = $1
-                `, [row.p_id]);
                 await commitTransaction(client);
                 return { prompt: row.prompt, promptId: row.p_id };
             }
@@ -83,7 +86,6 @@ async function updatePrompt(p_id, result) {
         await client.query(`
             UPDATE task_pipeline
             SET prompt_account = '<<GptAccount>>',
-                prompt_time = NULL,
                 result = $1
             WHERE p_id = $2
         `, [result, p_id]);
